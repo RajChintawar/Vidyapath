@@ -28,12 +28,17 @@ The system follows a layered architecture:
 ---
 
 ##  Repository Structure
-│
+
 ├── frontend/ # React UI
+
 ├── backend/ # Node.js backend APIs
+
 ├── ai-layer/ # Python-based AI agents
+
 ├── dataset/ # Synthetic and sample data
+
 ├── docs/ # Diagrams and documentation
+
 └── README.md
 
 ##  Project Workflow
