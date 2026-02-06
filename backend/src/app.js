@@ -15,6 +15,10 @@ app.use(express.json());
 const taskRoutes = require("./routes/taskRoutes");
 app.use("/api/tasks", taskRoutes);
 
+//4. Study Plan Routes
+const studyPlanRoutes = require("./routes/planRoutes");
+app.use("/api/study-plans", studyPlanRoutes);
+
 // 4. Test route
 app.get("/", (req, res) => {
   res.send("AI-Based Academic Planner Backend Running");
