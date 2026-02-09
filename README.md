@@ -98,3 +98,4 @@ The system follows a layered architecture:
 ✔ Activity monitoring working
 ✔ StudyPlan APIs tested
 ✔ Moongoes connection on Mongo Compass
+
