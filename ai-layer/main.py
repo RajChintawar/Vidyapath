@@ -1,29 +1,12 @@
-# ai-layer/planning/main.py
-from common.db import db
-# print("Collections:", db.list_collection_names())
 
+from planning_agent.planner import generate_study_plan
 from common.db import db
 
-print("CONNECTED DATABASE NAME:", db.name)
-print("ALL COLLECTIONS:", db.list_collection_names())
+# automatically fetch first user
+user = db.users.find_one({})
+print("Using user:", user["_id"])
 
-print("\n--- USERS COLLECTION CONTENT ---")
-users = list(db.users.find({}))
-print("Users found:", len(users))
-for u in users:
-    print(u)
+plan = generate_study_plan(str(user["_id"]))
 
-
-
-
-
-def test_db_connection():
-    users_count = db.users.count_documents({})
-    tasks_count = db.tasks.count_documents({})
-
-    print("DB connected successfully")
-    print("Users count:", users_count)
-    print("Tasks count:", tasks_count)
-
-if __name__ == "__main__":
-    test_db_connection()
+print("\nGenerated Study Plan:")
+print(plan)
