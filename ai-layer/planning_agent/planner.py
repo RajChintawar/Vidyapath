@@ -40,5 +40,44 @@ def generate_study_plan(user_id: str):
             if remaining_hours_today == 0:
                 current_date += timedelta(days=1)
                 remaining_hours_today = daily_hours
-
     return plan
+
+from datetime import datetime
+from bson import ObjectId
+from common.db import db
+
+
+def save_study_plan(user_id: str, plan: dict):
+    user_object_id = ObjectId(user_id)
+
+    for date_str, tasks in plan.items():
+
+        existing_plan = db.studyplans.find_one({
+            "userId": user_object_id,
+            "date": date_str
+        })
+
+        studyplan_doc = {
+            "userId": user_object_id,
+            "date": date_str,
+            "tasks": [
+                {
+                    "taskId": ObjectId(t["taskId"]),
+                    "allocatedHours": t["allocatedHours"]
+                }
+                for t in tasks
+            ],
+            "updatedAt": datetime.utcnow()
+        }
+
+        if existing_plan:
+            db.studyplans.update_one(
+                {"_id": existing_plan["_id"]},
+                {"$set": studyplan_doc}
+            )
+            print(f"Updated study plan for {date_str}")
+
+        else:
+            studyplan_doc["createdAt"] = datetime.utcnow()
+            db.studyplans.insert_one(studyplan_doc)
+            print(f"Inserted study plan for {date_str}")
