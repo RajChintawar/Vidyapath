@@ -81,13 +81,13 @@ StudyPlan:
 5. Save into studyplans collection
    - Update if plan already exists for that user and date
    - Insert otherwise
+6. Add priority weighting (deadline proximity + difficulty)
 
----
+-------------------------------------------------------------------------------------------------------
 
 ## Next Development Milestones
 
 ### Short-Term
-- Add priority weighting (deadline proximity + difficulty)
 - Prevent allocation beyond exam date
 - Improve scheduling distribution logic
 
