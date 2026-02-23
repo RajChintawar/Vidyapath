@@ -3,6 +3,29 @@ from bson import ObjectId
 from common.db import db
 
 
+# ==============================
+# Performance Boost Function
+# ==============================
+def get_task_performance_boost(task_id):
+    logs = list(db.activitylogs.find({"taskId": task_id}))
+
+    if not logs:
+        return 1
+
+    boost = 1
+
+    for log in logs:
+        if log["action"] == "missed":
+            boost += 0.5
+        elif log["action"] == "completed":
+            boost -= 0.2
+
+    return max(boost, 0.5)
+
+
+# ==============================
+# Study Plan Generator
+# ==============================
 def generate_study_plan(user_id: str):
 
     user = db.users.find_one({"_id": ObjectId(user_id)})
@@ -10,12 +33,9 @@ def generate_study_plan(user_id: str):
         raise Exception("User not found")
 
     daily_hours = user["studyHoursPerDay"]
-
     today = datetime.today().date()
 
-    # Fetch pending tasks
     raw_tasks = list(db.tasks.find({"status": "pending"}))
-
     enriched_tasks = []
 
     for task in raw_tasks:
@@ -29,7 +49,7 @@ def generate_study_plan(user_id: str):
 
         days_left = (deadline - today).days
         if days_left <= 0:
-            days_left = 1  # avoid division by zero
+            days_left = 1
 
         difficulty_map = {
             "Low": 1,
@@ -38,15 +58,16 @@ def generate_study_plan(user_id: str):
         }
 
         difficulty_weight = difficulty_map.get(subject["difficulty"], 1)
-
         urgency_score = 1 / days_left
 
-        priority = urgency_score * difficulty_weight
+        performance_boost = get_task_performance_boost(task["_id"])
+        priority = urgency_score * difficulty_weight * performance_boost
 
         enriched_tasks.append({
             "task": task,
             "priority": priority,
-            "exam_date": exam_date
+            "exam_date": exam_date,
+            "difficulty": subject["difficulty"]
         })
 
     # Sort by priority descending
@@ -56,44 +77,76 @@ def generate_study_plan(user_id: str):
     current_date = today
     remaining_hours_today = daily_hours
 
+    difficulty_chunk_map = {
+        "Low": 2,
+        "Medium": 1.5,
+        "High": 1
+    }
+
+    task_pool = []
+
     for item in enriched_tasks:
+        task_pool.append({
+            "task": item["task"],
+            "hours_left": item["task"]["estimatedHours"],
+            "exam_date": item["exam_date"],
+            "difficulty": item["difficulty"]
+        })
 
-        task = item["task"]
-        exam_date = item["exam_date"]
-        hours_left = task["estimatedHours"]
+    while any(t["hours_left"] > 0 for t in task_pool):
 
-        while hours_left > 0:
+        for t in task_pool:
 
-            if current_date > exam_date:
-                break  # do not schedule beyond exam
+            if t["hours_left"] <= 0:
+                continue
+
+            if current_date > t["exam_date"]:
+                continue
+
+            if remaining_hours_today <= 0:
+                current_date += timedelta(days=1)
+                remaining_hours_today = daily_hours
+
+            chunk_size = difficulty_chunk_map.get(t["difficulty"], 1)
+
+            allocatable = min(chunk_size, t["hours_left"], remaining_hours_today)
+
+            if allocatable <= 0:
+                continue
 
             date_str = current_date.isoformat()
 
             if date_str not in plan:
                 plan[date_str] = []
 
-            allocatable = min(hours_left, remaining_hours_today)
-
             plan[date_str].append({
-                "taskId": str(task["_id"]),
+                "taskId": str(t["task"]["_id"]),
                 "allocatedHours": allocatable
             })
 
-            hours_left -= allocatable
+            t["hours_left"] -= allocatable
             remaining_hours_today -= allocatable
 
-            if remaining_hours_today == 0:
-                current_date += timedelta(days=1)
-                remaining_hours_today = daily_hours
+    # Merge duplicate entries per day
+    for date in plan:
+        merged = {}
+        for entry in plan[date]:
+            tid = entry["taskId"]
+            merged[tid] = merged.get(tid, 0) + entry["allocatedHours"]
+
+        plan[date] = [
+            {"taskId": tid, "allocatedHours": hrs}
+            for tid, hrs in merged.items()
+        ]
 
     return plan
 
-# from datetime import datetime
-# from bson import ObjectId
-# from common.db import db
 
-
+# ==============================
+# Save Study Plan
+# ==============================
 def save_study_plan(user_id: str, plan: dict):
+
     user_object_id = ObjectId(user_id)
 
     for date_str, tasks in plan.items():
