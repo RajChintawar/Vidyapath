@@ -3,6 +3,7 @@ from bson import ObjectId # type: ignore
 from common.db import db
 from planning_agent.planner import generate_study_plan, save_study_plan
 from datetime import datetime
+from replanning_agent.replan import run_replanner as replanner_engine
 
 
 def seed_data():
@@ -53,8 +54,17 @@ def run_planner():
         print("No pending tasks. Nothing saved.")
 
 
+
+
+
 def run_replanner():
-    print("Replanner not implemented yet.")
+    user = db.users.find_one({})
+    if not user:
+        print("No user found.")
+        return
+
+    user_id = str(user["_id"])
+    replanner_engine(user_id)
 
 
 if __name__ == "__main__":
