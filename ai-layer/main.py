@@ -1,50 +1,79 @@
-
-from planning_agent.planner import generate_study_plan, save_study_plan
-from common.db import db
-
-user = db.users.find_one({})
-print("Using user:", user["_id"])
-
-plan = generate_study_plan(str(user["_id"]))
-
-print("\nGenerated Study Plan:")
-print(plan)
-
-if plan:
-    save_study_plan(str(user["_id"]), plan)
-    print("\nStudy Plan Saved to DB.")
-else:
-    print("\nNo pending tasks. Nothing saved.")
-
-
-from common.db import db
+import sys
 from bson import ObjectId # type: ignore
+from common.db import db
+from planning_agent.planner import generate_study_plan, save_study_plan
 from datetime import datetime
 
-# Replace with your real user id
-USER_ID = ObjectId("698579cbefbf271b6d5933d0")
 
-# 1️⃣ Insert new subject
-new_subject = {
-    "userId": USER_ID,
-    "subjectName": "Mathematics",
-    "difficulty": "Low",
-    "examDate": "2026-03-10"
-}
+def seed_data():
+    print("Seeding test data...")
 
-subject_result = db.subjects.insert_one(new_subject)
-print("Inserted Subject ID:", subject_result.inserted_id)
+    user = db.users.find_one({})
+    if not user:
+        print("No user found.")
+        return
 
-# 2️⃣ Insert new task for that subject
-new_task = {
-    "subjectId": subject_result.inserted_id,
-    "topic": "Linear Algebra",
-    "deadline": datetime(2026, 2, 28),
-    "estimatedHours": 4,
-    "status": "pending"
-}
+    subject = db.subjects.insert_one({
+        "userId": user["_id"],
+        "subjectName": "Seed Subject",
+        "difficulty": "Medium",
+        "examDate": "2026-04-01"
+    })
 
-task_result = db.tasks.insert_one(new_task)
-print("Inserted Task ID:", task_result.inserted_id)
+    task = db.tasks.insert_one({
+        "subjectId": subject.inserted_id,
+        "topic": "Seed Topic",
+        "deadline": datetime(2026, 3, 20),
+        "estimatedHours": 4,
+        "status": "pending"
+    })
 
+    print("Inserted Subject:", subject.inserted_id)
+    print("Inserted Task:", task.inserted_id)
+
+
+def run_planner():
+    user = db.users.find_one({})
+    if not user:
+        print("No user found.")
+        return
+
+    user_id = str(user["_id"])
+    print("Using user:", user_id)
+
+    plan = generate_study_plan(user_id)
+
+    print("\nGenerated Study Plan:")
+    print(plan)
+
+    if plan:
+        save_study_plan(user_id, plan)
+        print("\nStudy Plan Saved to DB.")
+    else:
+        print("No pending tasks. Nothing saved.")
+
+
+def run_replanner():
+    print("Replanner not implemented yet.")
+
+
+if __name__ == "__main__":
+
+    if len(sys.argv) < 2:
+        print("Usage: python main.py [seed | plan | replan]")
+        sys.exit(1)
+
+    command = sys.argv[1]
+
+    if command == "seed":
+        seed_data()
+
+    elif command == "plan":
+        run_planner()
+
+    elif command == "replan":
+        run_replanner()
+
+    else:
+        print("Unknown command.")
 
