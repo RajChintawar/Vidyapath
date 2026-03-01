@@ -64,10 +64,18 @@ def generate_study_plan(user_id: str):
         priority = urgency_score * difficulty_weight * performance_boost
 
         enriched_tasks.append({
-            "task": task,
-            "priority": priority,
-            "exam_date": exam_date,
-            "difficulty": subject["difficulty"]
+           "task": task,
+    "priority": priority,
+    "exam_date": exam_date,
+    "difficulty": subject["difficulty"],
+    "explanation": {
+        "difficulty": subject["difficulty"],
+        "daysLeft": days_left,
+        "urgencyScore": urgency_score,
+        "performanceBoost": performance_boost,
+        "replanBoost": task.get("replanBoost", 0),
+        "finalPriority": priority
+    }
         })
 
     # Sort by priority descending
@@ -87,10 +95,11 @@ def generate_study_plan(user_id: str):
 
     for item in enriched_tasks:
         task_pool.append({
-            "task": item["task"],
-            "hours_left": item["task"]["estimatedHours"],
-            "exam_date": item["exam_date"],
-            "difficulty": item["difficulty"]
+             "task": item["task"],
+    "hours_left": item["task"]["estimatedHours"],
+    "exam_date": item["exam_date"],
+    "difficulty": item["difficulty"],
+    "explanation": item["explanation"]
         })
 
     while any(t["hours_left"] > 0 for t in task_pool):
@@ -120,8 +129,10 @@ def generate_study_plan(user_id: str):
                 plan[date_str] = []
 
             plan[date_str].append({
-                "taskId": str(t["task"]["_id"]),
-                "allocatedHours": allocatable
+                  "taskId": str(t["task"]["_id"]),
+    "allocatedHours": allocatable,
+    "explanation": t["explanation"]
+
             })
 
             t["hours_left"] -= allocatable
@@ -130,14 +141,25 @@ def generate_study_plan(user_id: str):
     # Merge duplicate entries per day
     for date in plan:
         merged = {}
-        for entry in plan[date]:
-            tid = entry["taskId"]
-            merged[tid] = merged.get(tid, 0) + entry["allocatedHours"]
+        explanation_map = {}
 
-        plan[date] = [
-            {"taskId": tid, "allocatedHours": hrs}
-            for tid, hrs in merged.items()
-        ]
+    for entry in plan[date]:
+        tid = entry["taskId"]
+
+        if tid not in merged:
+            merged[tid] = 0
+            explanation_map[tid] = entry["explanation"]
+
+        merged[tid] += entry["allocatedHours"]
+
+    plan[date] = [
+        {
+            "taskId": tid,
+            "allocatedHours": hrs,
+            "explanation": explanation_map[tid]
+        }
+        for tid, hrs in merged.items()
+    ]
 
     return plan
 
