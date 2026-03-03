@@ -2,7 +2,7 @@ const express = require("express");
 require("dotenv").config();
 const mongoose = require("mongoose");
 const cors = require("cors");
-
+const aiRoutes = require("./routes/aiRoutes");
 
 // 1. Initialize app FIRST
 const app = express();
@@ -10,6 +10,7 @@ const app = express();
 // 2. Middleware
 app.use(cors());
 app.use(express.json());
+app.use("/api/ai", aiRoutes);
 
 // 3. Routes (AFTER app is defined)
 const taskRoutes = require("./routes/taskRoutes");
