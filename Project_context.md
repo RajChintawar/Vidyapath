@@ -83,11 +83,17 @@ StudyPlan:
    - Insert otherwise
 6. Add priority weighting (deadline proximity + difficulty)
 
+
+
+
+## Stage v2 of connecting AI_Layer & backend
+1. Fixed import packaging
+2. Fixed Windows curl trap
+3. Fixed endpoint mismatch
+4. Fixed 404 AI call
+5. Wired backend to AI correctly
+6. Verified JSON roundtrip end-to-end 
 -------------------------------------------------------------------------------------------------------
 
-## Next Development Milestones
 
-### Short-Term
-- Prevent allocation beyond exam date
-- Improve scheduling distribution logic
 
