@@ -1,99 +1,158 @@
-# Vidyapath – AI-Based Smart Academic Planner
+# Vidyapath Project Context
 
-## Project Overview
+## System Overview
+Vidyapath is an AI-based academic planning system that generates adaptive study schedules using user tasks, subjects, deadlines, and behavioral history.
 
-Vidyapath is an AI-driven academic planning system that generates, adapts, and stores personalized study schedules for students based on:
+Architecture:
 
-- Study hours per day
-- Subject difficulty
-- Assignment deadlines
-- Examination dates
-- Task completion behavior (activity logs)
-
-The system follows an Agentic AI architecture with planning, monitoring, and replanning components.
-
----
-
-## Tech Stack
-
-### Backend
-- Node.js (Express)
-- MongoDB (NoSQL)
-- Mongoose
-
-### AI Layer
-- Python
-- PyMongo
-- Modular agent structure:
-  - planning
-  - monitoring
-  - replanning
-  - explaining
-  - common (config, db, utils)
+Frontend (to be built)
+↓
+Node.js Backend (API Layer)
+↓
+FastAPI AI Layer (Planning Engine)
+↓
+MongoDB (Data Layer)
 
 ---
 
-## Database: academic_planner
+# Database Collections
 
-Collections:
-
-- users
-- subjects
-- tasks
-- activitylogs
-- studyplans
-
-### Data Relationships
-
-User  
-└── Subject  
-  └── Task  
-    └── ActivityLog  
-
-StudyPlan:
-- Generated per user per date
-- Stores allocated tasks and hours
+users
+subjects
+tasks
+activitylogs
+studyplans
 
 ---
 
-## Current Implementation Status
+# Backend (Node.js)
 
-### Completed
+## Core APIs Implemented
+Subjects API
+- Create subject
+- Fetch subjects by user
 
-- MongoDB connection fixed (case-sensitive collection issue resolved)
-- Users visible from Python and Node
-- Planning Agent v1 implemented
-- Study plan generation based on:
-  - pending tasks
-  - estimated hours
-  - user studyHoursPerDay
-- Study plan persistence implemented
-- Duplicate study plans prevented (update instead of insert)
+Tasks API
+- Create task
+- Update task status
+- Fetch tasks
+
+Activity Logs API
+- Log task actions (completed / missed)
+
+Study Plan API
+- Save study plan
+- Fetch study plan
+
+AI Trigger API
+POST /api/ai/generate-plan/:userId
+
+This endpoint calls the AI layer to generate a plan.
 
 ---
 
-## Planning Agent v1 Logic
+# AI Layer (FastAPI)
 
-1. Fetch user
-2. Fetch pending tasks sorted by deadline
-3. Allocate daily study hours
-4. Generate date-wise schedule
-5. Save into studyplans collection
-   - Update if plan already exists for that user and date
-   - Insert otherwise
-6. Add priority weighting (deadline proximity + difficulty)
+## Agents Implemented
 
+### Planning Agent
+Generates study schedules based on:
+- task deadlines
+- subject difficulty
+- user daily study hours
 
+### Monitoring Agent
+Reads activitylogs to track:
+- completed tasks
+- missed tasks
 
+### Replanning Agent
+If tasks are missed, the system redistributes workload.
 
-## Stage v2 of connecting AI_Layer & backend
-1. Fixed import packaging
-2. Fixed Windows curl trap
-3. Fixed endpoint mismatch
-4. Fixed 404 AI call
-5. Wired backend to AI correctly
-6. Verified JSON roundtrip end-to-end 
--------------------------------------------------------------------------------------------------------
+### Explainability Layer
+Each task allocation includes explanation:
+- difficulty
+- urgency
+- performance boost
+- reliability score
+- final priority
 
+---
 
+# Adaptive Learning (NEW)
 
+The planner now learns from user behavior.
+
+### Reliability Score
+Computed from activity logs:
+
+reliability = completed / (completed + missed)
+
+Range:
+0 → user always misses
+0.5 → neutral
+1 → always completes
+
+### Adaptive Priority
+
+priority = urgency × difficulty × performanceBoost × (1 + (1 − reliability))
+
+Meaning:
+Tasks frequently missed are prioritized earlier.
+
+---
+
+# Confidence Prediction (NEW)
+
+The planner estimates the probability that a user will complete the daily plan.
+
+Daily confidence:
+
+confidence = average reliability of tasks scheduled that day
+
+Example output:
+
+{
+ "2026-03-06": {
+   "tasks": [...],
+   "confidence": 0.72
+ }
+}
+
+Confidence meaning:
+
+0.90 → Very likely to complete  
+0.70 → Moderate probability  
+0.50 → Risky plan  
+0.30 → Very unlikely  
+
+Confidence is stored in MongoDB inside `studyplans`.
+
+---
+
+# Current Development Stage
+
+Completed:
+
+- Database schema
+- Backend APIs
+- AI planning engine
+- Monitoring agent
+- Replanning agent
+- Explainability layer
+- Backend ↔ AI integration
+- Adaptive reliability learning
+- Confidence prediction
+
+---
+
+# Next Phase
+
+Remaining backend work:
+
+- Risk detection for failing study plans
+- Confidence analytics API
+- System evaluation metrics
+
+After backend completion:
+Frontend development will begin.
