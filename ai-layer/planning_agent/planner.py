@@ -24,6 +24,30 @@ def get_task_performance_boost(task_id):
 
 
 # ==============================
+# Reliability Function
+# ==============================
+def get_task_reliability(task_id):
+
+    logs = list(db.activitylogs.find({"taskId": task_id}))
+
+    completed = 0
+    missed = 0
+
+    for log in logs:
+        if log["action"] == "completed":
+            completed += 1
+        elif log["action"] == "missed":
+            missed += 1
+
+    total = completed + missed
+
+    if total == 0:
+        return 0.5
+
+    return completed / total
+
+
+# ==============================
 # Study Plan Generator
 # ==============================
 def generate_study_plan(user_id: str):
@@ -61,24 +85,26 @@ def generate_study_plan(user_id: str):
         urgency_score = 1 / days_left
 
         performance_boost = get_task_performance_boost(task["_id"])
-        priority = urgency_score * difficulty_weight * performance_boost
+        reliability = get_task_reliability(task["_id"])
+
+        priority = urgency_score * difficulty_weight * performance_boost * (1 + (1 - reliability))
 
         enriched_tasks.append({
-           "task": task,
-    "priority": priority,
-    "exam_date": exam_date,
-    "difficulty": subject["difficulty"],
-    "explanation": {
-        "difficulty": subject["difficulty"],
-        "daysLeft": days_left,
-        "urgencyScore": urgency_score,
-        "performanceBoost": performance_boost,
-        "replanBoost": task.get("replanBoost", 0),
-        "finalPriority": priority
-    }
+            "task": task,
+            "priority": priority,
+            "exam_date": exam_date,
+            "difficulty": subject["difficulty"],
+            "explanation": {
+                "difficulty": subject["difficulty"],
+                "daysLeft": days_left,
+                "urgencyScore": urgency_score,
+                "performanceBoost": performance_boost,
+                "reliability": reliability,
+                "replanBoost": task.get("replanBoost", 0),
+                "finalPriority": priority
+            }
         })
 
-    # Sort by priority descending
     enriched_tasks.sort(key=lambda x: x["priority"], reverse=True)
 
     plan = {}
@@ -95,11 +121,11 @@ def generate_study_plan(user_id: str):
 
     for item in enriched_tasks:
         task_pool.append({
-             "task": item["task"],
-    "hours_left": item["task"]["estimatedHours"],
-    "exam_date": item["exam_date"],
-    "difficulty": item["difficulty"],
-    "explanation": item["explanation"]
+            "task": item["task"],
+            "hours_left": item["task"]["estimatedHours"],
+            "exam_date": item["exam_date"],
+            "difficulty": item["difficulty"],
+            "explanation": item["explanation"]
         })
 
     while any(t["hours_left"] > 0 for t in task_pool):
@@ -129,39 +155,71 @@ def generate_study_plan(user_id: str):
                 plan[date_str] = []
 
             plan[date_str].append({
-                  "taskId": str(t["task"]["_id"]),
-    "allocatedHours": allocatable,
-    "explanation": t["explanation"]
-
+                "taskId": str(t["task"]["_id"]),
+                "allocatedHours": allocatable,
+                "explanation": t["explanation"]
             })
 
             t["hours_left"] -= allocatable
             remaining_hours_today -= allocatable
 
-    # Merge duplicate entries per day
+
+    # ==============================
+    # Merge duplicate entries
+    # ==============================
     for date in plan:
+
         merged = {}
         explanation_map = {}
 
-    for entry in plan[date]:
-        tid = entry["taskId"]
+        for entry in plan[date]:
 
-        if tid not in merged:
-            merged[tid] = 0
-            explanation_map[tid] = entry["explanation"]
+            tid = entry["taskId"]
 
-        merged[tid] += entry["allocatedHours"]
+            if tid not in merged:
+                merged[tid] = 0
+                explanation_map[tid] = entry["explanation"]
 
-    plan[date] = [
-        {
-            "taskId": tid,
-            "allocatedHours": hrs,
-            "explanation": explanation_map[tid]
+            merged[tid] += entry["allocatedHours"]
+
+        plan[date] = [
+            {
+                "taskId": tid,
+                "allocatedHours": hrs,
+                "explanation": explanation_map[tid]
+            }
+            for tid, hrs in merged.items()
+        ]
+
+
+    # ==============================
+    # Compute Confidence Score
+    # ==============================
+    final_plan = {}
+
+    for date, tasks in plan.items():
+
+        total_reliability = 0
+        count = 0
+
+        for task in tasks:
+            task_id = ObjectId(task["taskId"])
+            reliability = get_task_reliability(task_id)
+
+            total_reliability += reliability
+            count += 1
+
+        if count > 0:
+            confidence = round(total_reliability / count, 2)
+        else:
+            confidence = 0.5
+
+        final_plan[date] = {
+            "tasks": tasks,
+            "confidence": confidence
         }
-        for tid, hrs in merged.items()
-    ]
 
-    return plan
+    return final_plan
 
 
 # ==============================
@@ -171,7 +229,10 @@ def save_study_plan(user_id: str, plan: dict):
 
     user_object_id = ObjectId(user_id)
 
-    for date_str, tasks in plan.items():
+    for date_str, day_data in plan.items():
+
+        tasks = day_data["tasks"]
+        confidence = day_data["confidence"]
 
         existing_plan = db.studyplans.find_one({
             "userId": user_object_id,
@@ -181,6 +242,7 @@ def save_study_plan(user_id: str, plan: dict):
         studyplan_doc = {
             "userId": user_object_id,
             "date": date_str,
+            "confidence": confidence,
             "tasks": [
                 {
                     "taskId": ObjectId(t["taskId"]),
@@ -192,13 +254,18 @@ def save_study_plan(user_id: str, plan: dict):
         }
 
         if existing_plan:
+
             db.studyplans.update_one(
                 {"_id": existing_plan["_id"]},
                 {"$set": studyplan_doc}
             )
+
             print(f"Updated study plan for {date_str}")
 
         else:
+
             studyplan_doc["createdAt"] = datetime.utcnow()
+
             db.studyplans.insert_one(studyplan_doc)
+
             print(f"Inserted study plan for {date_str}")
