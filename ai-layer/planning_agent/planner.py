@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from bson import ObjectId
+from bson import ObjectId # type: ignore
 from common.db import db
 
 
@@ -45,6 +45,19 @@ def get_task_reliability(task_id):
         return 0.5
 
     return completed / total
+
+
+# ==============================
+# Risk Function
+# ==============================
+def get_risk_level(confidence):
+
+    if confidence >= 0.75:
+        return "LOW"
+    elif confidence >= 0.5:
+        return "MEDIUM"
+    else:
+        return "HIGH"
 
 
 # ==============================
@@ -100,7 +113,6 @@ def generate_study_plan(user_id: str):
                 "urgencyScore": urgency_score,
                 "performanceBoost": performance_boost,
                 "reliability": reliability,
-                "replanBoost": task.get("replanBoost", 0),
                 "finalPriority": priority
             }
         })
@@ -128,8 +140,15 @@ def generate_study_plan(user_id: str):
             "explanation": item["explanation"]
         })
 
+    loop_guard = 0
+
     while any(t["hours_left"] > 0 for t in task_pool):
 
+        loop_guard += 1
+        if loop_guard > 1000:
+            print("Loop guard triggered")
+            break
+        progress_made = False
         for t in task_pool:
 
             if t["hours_left"] <= 0:
@@ -147,7 +166,10 @@ def generate_study_plan(user_id: str):
             allocatable = min(chunk_size, t["hours_left"], remaining_hours_today)
 
             if allocatable <= 0:
-                continue
+             current_date += timedelta(days=1)
+             remaining_hours_today = daily_hours
+             continue
+
 
             date_str = current_date.isoformat()
 
@@ -162,11 +184,13 @@ def generate_study_plan(user_id: str):
 
             t["hours_left"] -= allocatable
             remaining_hours_today -= allocatable
+            progress_made = True 
 
+            if not progress_made:
+             print("No progress possible, breaking loop")
+             break
 
-    # ==============================
-    # Merge duplicate entries
-    # ==============================
+    # merge duplicates
     for date in plan:
 
         merged = {}
@@ -192,9 +216,7 @@ def generate_study_plan(user_id: str):
         ]
 
 
-    # ==============================
-    # Compute Confidence Score
-    # ==============================
+    # confidence + risk
     final_plan = {}
 
     for date, tasks in plan.items():
@@ -214,9 +236,12 @@ def generate_study_plan(user_id: str):
         else:
             confidence = 0.5
 
+        risk = get_risk_level(confidence)
+
         final_plan[date] = {
             "tasks": tasks,
-            "confidence": confidence
+            "confidence": confidence,
+            "risk": risk
         }
 
     return final_plan
@@ -233,6 +258,7 @@ def save_study_plan(user_id: str, plan: dict):
 
         tasks = day_data["tasks"]
         confidence = day_data["confidence"]
+        risk = day_data["risk"]
 
         existing_plan = db.studyplans.find_one({
             "userId": user_object_id,
@@ -243,6 +269,7 @@ def save_study_plan(user_id: str, plan: dict):
             "userId": user_object_id,
             "date": date_str,
             "confidence": confidence,
+            "risk": risk,
             "tasks": [
                 {
                     "taskId": ObjectId(t["taskId"]),
