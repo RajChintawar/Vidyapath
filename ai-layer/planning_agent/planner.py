@@ -155,14 +155,14 @@ def generate_study_plan(user_id: str):
                 continue
 
             if current_date > t["exam_date"]:
-                continue
+                    t["hours_left"] = 0
+                    continue
 
             if remaining_hours_today <= 0:
                 current_date += timedelta(days=1)
                 remaining_hours_today = daily_hours
 
-            chunk_size = difficulty_chunk_map.get(t["difficulty"], 1)
-
+            chunk_size = int(difficulty_chunk_map.get(t["difficulty"], 1))
             allocatable = min(chunk_size, t["hours_left"], remaining_hours_today)
 
             if allocatable <= 0:
@@ -182,7 +182,7 @@ def generate_study_plan(user_id: str):
                 "explanation": t["explanation"]
             })
 
-            t["hours_left"] -= allocatable
+            t["hours_left"] = max(0, t["hours_left"] - allocatable)
             remaining_hours_today -= allocatable
             progress_made = True 
 
