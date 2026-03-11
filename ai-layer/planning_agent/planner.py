@@ -28,23 +28,33 @@ def get_task_performance_boost(task_id):
 # ==============================
 def get_task_reliability(task_id):
 
-    logs = list(db.activitylogs.find({"taskId": task_id}))
+    logs = list(
+        db.activitylogs
+        .find({"taskId": task_id})
+        .sort("timestamp", -1)
+        .limit(10)
+    )
 
-    completed = 0
-    missed = 0
-
-    for log in logs:
-        if log["action"] == "completed":
-            completed += 1
-        elif log["action"] == "missed":
-            missed += 1
-
-    total = completed + missed
-
-    if total == 0:
+    if not logs:
         return 0.5
 
-    return completed / total
+    score = 0
+    weight = 1.0
+    decay = 0.8
+
+    for log in logs:
+
+        if log["action"] == "completed":
+            score += 1 * weight
+
+        elif log["action"] == "missed":
+            score += 0 * weight
+
+        weight *= decay
+
+    reliability = score / sum(decay**i for i in range(len(logs)))
+
+    return round(reliability, 2)
 
 
 # ==============================

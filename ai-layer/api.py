@@ -1,3 +1,5 @@
+from common.db import db
+from bson import ObjectId
 from fastapi import FastAPI, HTTPException # type: ignore
 from planning_agent.planner import generate_study_plan, save_study_plan
 from replanning_agent.replan import run_replanner 
@@ -18,10 +20,10 @@ def generate_plan(user_id: str):
         if plan:
             save_study_plan(user_id, plan)
 
-        return {
-            "userId": user_id,
-            "plan": plan
-        }
+            return {
+        "message": "Plan generated",
+        "days": plan
+    }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -35,3 +37,29 @@ def replan(user_id: str):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+
+
+@app.get("/studyplan/{user_id}")
+def get_studyplan(user_id: str):
+
+    plans = list(
+        db.studyplans.find(
+            {"userId": ObjectId(user_id)}
+        )
+    )
+
+    result = []
+
+    for p in plans:
+
+        p["_id"] = str(p["_id"])
+        p["userId"] = str(p["userId"])
+
+        if "tasks" in p:
+            for t in p["tasks"]:
+                t["taskId"] = str(t["taskId"])
+
+        result.append(p)
+
+    return result
