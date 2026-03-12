@@ -111,7 +111,7 @@ def get_progress(user_id: str):
 @app.get("/studyplan/latest/{user_id}")
 def get_latest_plan(user_id: str):
 
-    from bson import ObjectId
+    from bson import ObjectId # type: ignore
     from common.db import db
 
     uid = ObjectId(user_id)
@@ -136,7 +136,7 @@ def get_latest_plan(user_id: str):
 @app.get("/subjects/{user_id}")
 def get_subjects(user_id: str):
 
-    from bson import ObjectId
+    from bson import ObjectId # type: ignore
     from common.db import db
 
     uid = ObjectId(user_id)
@@ -162,7 +162,7 @@ def get_subjects(user_id: str):
 @app.get("/tasks/{user_id}")
 def get_tasks(user_id: str):
 
-    from bson import ObjectId
+    from bson import ObjectId # type: ignore
     from common.db import db
 
     uid = ObjectId(user_id)
@@ -195,7 +195,7 @@ def get_tasks(user_id: str):
 def add_log(data: dict):
 
     from common.db import db
-    from bson import ObjectId
+    from bson import ObjectId # type: ignore
     from datetime import datetime
 
     log = {
