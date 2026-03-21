@@ -1,44 +1,75 @@
 from common.db import db
-from bson import ObjectId # type: ignore
-from fastapi import FastAPI, HTTPException # type: ignore
+from bson import ObjectId  # type: ignore
+
+from fastapi import FastAPI, HTTPException  # type: ignore
+from fastapi.middleware.cors import CORSMiddleware  # type: ignore
+
 from planning_agent.planner import generate_study_plan, save_study_plan
-from replanning_agent.replan import run_replanner 
+from replanning_agent.replan import run_replanner
+
 
 app = FastAPI(title="Vidyapath AI Engine")
 
+# ✅ CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# -------------------------
+# Health
+# -------------------------
 
 @app.get("/")
 def health_check():
     return {"status": "AI Engine Running"}
 
 
+# -------------------------
+# Generate Plan
+# -------------------------
+
 @app.post("/generate-plan/{user_id}")
 def generate_plan(user_id: str):
+
     try:
+
         plan = generate_study_plan(user_id)
 
         if plan:
             save_study_plan(user_id, plan)
 
-            return {
-        "message": "Plan generated",
-        "days": plan
-    }
+        return {
+            "message": "Plan generated",
+            "days": plan
+        }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# -------------------------
+# Replan
+# -------------------------
+
 @app.post("/replan/{user_id}")
 def replan(user_id: str):
+
     try:
         run_replanner(user_id)
         return {"message": "Replanning executed"}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
 
+
+# -------------------------
+# All studyplans
+# -------------------------
 
 @app.get("/studyplan/{user_id}")
 def get_studyplan(user_id: str):
@@ -64,10 +95,13 @@ def get_studyplan(user_id: str):
 
     return result
 
+
+# -------------------------
+# Progress API
+# -------------------------
+
 @app.get("/progress/{user_id}")
 def get_progress(user_id: str):
-
-    from bson import ObjectId # type: ignore
 
     uid = ObjectId(user_id)
 
@@ -108,11 +142,13 @@ def get_progress(user_id: str):
         "latestRisk": risk
     }
 
+
+# -------------------------
+# Latest plan
+# -------------------------
+
 @app.get("/studyplan/latest/{user_id}")
 def get_latest_plan(user_id: str):
-
-    from bson import ObjectId # type: ignore
-    from common.db import db
 
     uid = ObjectId(user_id)
 
@@ -133,37 +169,33 @@ def get_latest_plan(user_id: str):
 
     return plan
 
+
+# -------------------------
+# Subjects
+# -------------------------
+
 @app.get("/subjects/{user_id}")
 def get_subjects(user_id: str):
-
-    from bson import ObjectId # type: ignore
-    from common.db import db
 
     uid = ObjectId(user_id)
 
     subjects = list(
-        db.subjects.find(
-            {"userId": uid}
-        )
+        db.subjects.find({"userId": uid})
     )
 
-    result = []
-
     for s in subjects:
-
         s["_id"] = str(s["_id"])
         s["userId"] = str(s["userId"])
 
-        result.append(s)
+    return subjects
 
-    return result
 
+# -------------------------
+# Tasks
+# -------------------------
 
 @app.get("/tasks/{user_id}")
 def get_tasks(user_id: str):
-
-    from bson import ObjectId # type: ignore
-    from common.db import db
 
     uid = ObjectId(user_id)
 
@@ -179,23 +211,20 @@ def get_tasks(user_id: str):
         )
     )
 
-    result = []
-
     for t in tasks:
-
         t["_id"] = str(t["_id"])
         t["subjectId"] = str(t["subjectId"])
 
-        result.append(t)
+    return tasks
 
-    return result
 
+# -------------------------
+# Activity log
+# -------------------------
 
 @app.post("/activitylog")
 def add_log(data: dict):
 
-    from common.db import db
-    from bson import ObjectId # type: ignore
     from datetime import datetime
 
     log = {
