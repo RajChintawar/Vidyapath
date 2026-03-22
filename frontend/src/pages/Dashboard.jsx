@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getLatestPlan } from "../api/studyplanApi";
 import { getProgress } from "../api/progressApi";
+import axios from "axios";
 
 import "./dashboard.css";
 
@@ -29,6 +30,48 @@ function Dashboard() {
     return "risk-low";
   };
 
+  const generatePlan = () => {
+
+  axios
+    .post(
+      "http://localhost:8000/generate-plan/698579cbefbf271b6d5933d0"
+    )
+    .then(() => {
+
+      alert("Plan generated");
+
+      // window.location.reload();
+
+    })
+    .catch(err => console.log(err));
+
+};
+
+
+const replan = async () => {
+
+  try {
+
+    await axios.post(
+      "http://localhost:8000/replan/698579cbefbf271b6d5933d0"
+    );
+
+    const res = await axios.get(
+      "http://localhost:8000/studyplan/latest/698579cbefbf271b6d5933d0"
+    );
+
+    setPlan(res.data);
+
+    alert("Replanned");
+
+  } catch (err) {
+
+    console.log(err);
+
+  }
+
+};
+
   return (
 
     <div>
@@ -39,7 +82,37 @@ function Dashboard() {
 
       <div className="container">
 
+         <button
+  onClick={generatePlan}
+  style={{
+    padding: 10,
+    marginBottom: 20,
+    background: "#0ea5e9",
+    color: "white",
+    border: "none",
+    borderRadius: 6,
+    cursor: "pointer"
+  }}
+>
+  Generate Plan
+</button>
+
+<button onClick={replan}
+  style={{
+    padding: 10,
+    marginBottom: 50,
+    background: "#0ea5e9",
+    color: "white",
+    border: "none",
+    borderRadius: 6,
+    cursor: "pointer"
+  }}>
+  Replan
+</button>
         <div className="grid">
+
+          
+
 
           {/* PLAN CARD */}
 

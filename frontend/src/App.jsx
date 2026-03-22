@@ -3,6 +3,7 @@ import Tasks from "./pages/Tasks";
 import Navbar from "./components/Navbar";
 import Dashboard from "./pages/Dashboard";
 import Subjects from "./pages/Subjects";
+import Progress from "./pages/Progress";
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         <Route path="/" element={<Dashboard />} />
          <Route path="/subjects" element={<Subjects />} />
          <Route path="/tasks" element={<Tasks />} />
+<Route path="/progress" element={<Progress />} />
       </Routes>
 
     </BrowserRouter>
