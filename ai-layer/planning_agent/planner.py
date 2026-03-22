@@ -80,8 +80,7 @@ def generate_study_plan(user_id: str):
         raise Exception("User not found")
 
     daily_hours = user["studyHoursPerDay"]
-    today = datetime.today().date()
-
+    today = datetime.utcnow().date()
     # ✅ get subjects of this user
     subjects = list(
     db.subjects.find({"userId": ObjectId(user_id)})
@@ -181,7 +180,7 @@ def generate_study_plan(user_id: str):
     enriched_tasks.sort(key=lambda x: x["priority"], reverse=True)
 
     plan = {}
-    current_date = today
+    current_date = datetime.utcnow().date()
     remaining_hours_today = daily_hours
 
     difficulty_chunk_map = {
@@ -305,6 +304,7 @@ def generate_study_plan(user_id: str):
             "risk": risk
         }
 
+    print("FINAL PLAN:", final_plan)
     return final_plan
 
 
@@ -318,13 +318,8 @@ def save_study_plan(user_id: str, plan: dict):
     for date_str, day_data in plan.items():
 
         tasks = day_data["tasks"]
-        confidence = day_data["confidence"]
-        risk = day_data["risk"]
-
-        existing_plan = db.studyplans.find_one({
-            "userId": user_object_id,
-            "date": date_str
-        })
+        confidence = day_data.get("confidence", 0.5)
+        risk = day_data.get("risk", "MEDIUM")
 
         studyplan_doc = {
             "userId": user_object_id,
@@ -338,22 +333,10 @@ def save_study_plan(user_id: str, plan: dict):
                 }
                 for t in tasks
             ],
+            "createdAt": datetime.utcnow(),
             "updatedAt": datetime.utcnow()
         }
 
-        if existing_plan:
+        db.studyplans.insert_one(studyplan_doc)
 
-            db.studyplans.update_one(
-                {"_id": existing_plan["_id"]},
-                {"$set": studyplan_doc}
-            )
-
-            print(f"Updated study plan for {date_str}")
-
-        else:
-
-            studyplan_doc["createdAt"] = datetime.utcnow()
-
-            db.studyplans.insert_one(studyplan_doc)
-
-            print(f"Inserted study plan for {date_str}")
+        print(f"Inserted study plan for {date_str}")
