@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from bson import ObjectId # type: ignore
+from bson import ObjectId  # type: ignore
 from common.db import db
 
 
@@ -52,7 +52,7 @@ def get_task_reliability(task_id):
 
         weight *= decay
 
-    reliability = score / sum(decay**i for i in range(len(logs)))
+    reliability = score / sum(decay ** i for i in range(len(logs)))
 
     return round(reliability, 2)
 
@@ -82,37 +82,88 @@ def generate_study_plan(user_id: str):
     daily_hours = user["studyHoursPerDay"]
     today = datetime.today().date()
 
-    raw_tasks = list(db.tasks.find({"status": "pending"}))
+    # ✅ get subjects of this user
+    subjects = list(
+    db.subjects.find({"userId": ObjectId(user_id)})
+)
+
+    subject_ids = []
+    for s in subjects:
+     subject_ids.append(ObjectId(s["_id"]))
+
+    raw_tasks = list(
+    db.tasks.find({
+        "subjectId": {
+            "$in": subject_ids
+        },
+        "status": "pending"
+    })
+)
+    print("RAW TASKS:", raw_tasks)
+
     enriched_tasks = []
 
     for task in raw_tasks:
 
-        subject = db.subjects.find_one({"_id": task["subjectId"]})
+        subject = db.subjects.find_one(
+            {"_id": task["subjectId"]}
+        )
+
         if not subject:
             continue
 
-        deadline = task["deadline"].date()
-        exam_date = datetime.strptime(subject["examDate"], "%Y-%m-%d").date()
+    deadline_field = task["deadline"]
 
-        days_left = (deadline - today).days
-        if days_left <= 0:
+    if isinstance(deadline_field, datetime):
+        deadline = deadline_field.date()
+    else:
+       deadline = datetime.fromisoformat(
+        str(deadline_field).replace("Z", "")
+    ).date()
+
+    exam_field = subject["examDate"]
+
+    if isinstance(exam_field, datetime):
+       exam_date = exam_field.date()
+    else:
+       exam_date = datetime.fromisoformat(
+        str(exam_field)
+    ).date()
+
+       days_left = (deadline - today).days
+
+    if days_left <= 0:
             days_left = 1
 
-        difficulty_map = {
+    difficulty_map = {
             "Low": 1,
             "Medium": 2,
             "High": 3
         }
 
-        difficulty_weight = difficulty_map.get(subject["difficulty"], 1)
-        urgency_score = 1 / days_left
+    difficulty_weight = difficulty_map.get(
+            subject["difficulty"],
+            1
+        )
 
-        performance_boost = get_task_performance_boost(task["_id"])
-        reliability = get_task_reliability(task["_id"])
+    urgency_score = 1 / days_left
 
-        priority = urgency_score * difficulty_weight * performance_boost * (1 + (1 - reliability))
+    performance_boost = get_task_performance_boost(
+            task["_id"]
+        )
 
-        enriched_tasks.append({
+    reliability = get_task_reliability(
+            task["_id"]
+        )
+
+    priority = (
+            urgency_score
+            * difficulty_weight
+            * performance_boost
+            * (1 + (1 - reliability))
+        )
+
+    enriched_tasks.append({
             "task": task,
             "priority": priority,
             "exam_date": exam_date,
