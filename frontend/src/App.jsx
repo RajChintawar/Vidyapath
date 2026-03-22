@@ -1,38 +1,22 @@
-import { useEffect, useState } from "react";
-import { getLatestPlan } from "./api/studyplanApi";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Tasks from "./pages/Tasks";
+import Navbar from "./components/Navbar";
+import Dashboard from "./pages/Dashboard";
+import Subjects from "./pages/Subjects";
 
 function App() {
-
-  const [plan, setPlan] = useState(null);
-
-  const userId = "698579cbefbf271b6d5933d0";
-
-  useEffect(() => {
-
-    getLatestPlan(userId)
-      .then(res => {
-        setPlan(res.data);
-      })
-      .catch(err => {
-        console.log(err);
-      });
-
-  }, []);
-
   return (
-    <div>
+    <BrowserRouter>
 
-      <h1>Vidyapath Dashboard</h1>
+      <Navbar />
 
-      {plan && (
-        <div>
-          <h2>Date: {plan.date}</h2>
-          <h3>Confidence: {plan.confidence}</h3>
-          <h3>Risk: {plan.risk}</h3>
-        </div>
-      )}
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+         <Route path="/subjects" element={<Subjects />} />
+         <Route path="/tasks" element={<Tasks />} />
+      </Routes>
 
-    </div>
+    </BrowserRouter>
   );
 }
 
