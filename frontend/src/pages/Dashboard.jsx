@@ -9,10 +9,13 @@ function Dashboard() {
 
   const userId = "698579cbefbf271b6d5933d0";
 
+  const [loading, setLoading] = useState(false);
   const [plan, setPlan] = useState(null);
   const [progress, setProgress] = useState(null);
 
   useEffect(() => {
+
+    console.log("RENDERING DASHBOARD");
 
     getLatestPlan(userId)
       .then(res => setPlan(res.data))
@@ -30,162 +33,136 @@ function Dashboard() {
     return "risk-low";
   };
 
-  const generatePlan = () => {
+  const generatePlan = async () => {
+    if (loading) return;
 
-  axios
-    .post(
-      "http://localhost:8000/generate-plan/698579cbefbf271b6d5933d0"
-    )
-    .then(() => {
+    try {
+      setLoading(true);
 
-      alert("Plan generated");
+      await axios.post(`http://localhost:8000/generate-plan/${userId}`);
 
-      // window.location.reload();
+      const res = await axios.get(
+        `http://localhost:8000/studyplan/latest/${userId}`
+      );
 
-    })
-    .catch(err => console.log(err));
+setPlan(null); // clear old plan
 
-};
+setTimeout(() => {
+  setPlan(res.data);
+  alert("New Plan Generated");
+}, 100);
 
+    } catch (err) {
+      console.log(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-const replan = async () => {
+  const replan = async () => {
+    try {
+      setLoading(true);
 
-  try {
+      await axios.post(`http://localhost:8000/generate-plan/${userId}`);
 
-    await axios.post(
-      "http://localhost:8000/replan/698579cbefbf271b6d5933d0"
-    );
+      const res = await axios.get(
+        `http://localhost:8000/studyplan/latest/${userId}`
+      );
 
-    const res = await axios.get(
-      "http://localhost:8000/studyplan/latest/698579cbefbf271b6d5933d0"
-    );
-
-    setPlan(res.data);
-
-    alert("Replanned");
-
-  } catch (err) {
-
-    console.log(err);
-
-  }
-
-};
+setPlan(null);
+setTimeout(() => {
+  setPlan(res.data);
+  alert("Replanned Successfully");
+}, 100);
+    } catch (err) {
+      console.log(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
 
-    <div>
 
+    
+
+    <div className="dashboard">
+
+
+      {loading && (
+  <div className="overlay">
+    Generating new plan...
+  </div>
+)}
+
+      {/* HEADER */}
       <div className="header">
         Vidyapath Dashboard
       </div>
 
       <div className="container">
 
-         <button
-  onClick={generatePlan}
-  style={{
-    padding: 10,
-    marginBottom: 20,
-    background: "#0ea5e9",
-    color: "white",
-    border: "none",
-    borderRadius: 6,
-    cursor: "pointer"
-  }}
->
-  Generate Plan
-</button>
+        {/* ACTION BUTTONS */}
+        <div className="actions">
+          <button onClick={generatePlan} disabled={loading}>
+            {loading ? "Generating..." : "Generate Plan"}
+          </button>
 
-<button onClick={replan}
-  style={{
-    padding: 10,
-    marginBottom: 50,
-    background: "#0ea5e9",
-    color: "white",
-    border: "none",
-    borderRadius: 6,
-    cursor: "pointer"
-  }}>
-  Replan
-</button>
+          <button onClick={replan} className="replan-btn" disabled={loading}>
+            Replan
+          </button>
+        </div>
+
+        {/* CARDS */}
         <div className="grid">
 
-          
-
-
-          {/* PLAN CARD */}
-
           {plan && (
-
             <div className="card">
-
               <h2>Latest Plan</h2>
-
-              <p>Date: {plan.date}</p>
-
-              <p>Confidence: {plan.confidence}</p>
-
+              <p><b>Date:</b> {plan.date}</p>
+              <p><b>Confidence:</b> {plan.confidence}</p>
               <p>
-                Risk:
+                <b>Risk:</b>
                 <span className={riskClass(plan.risk)}>
-                  {" "}{plan.risk}
+                  {plan.risk}
                 </span>
               </p>
-
             </div>
-
           )}
 
-
-          {/* PROGRESS CARD */}
-
           {progress && (
-
             <div className="card">
-
               <h2>Progress</h2>
-
               <p>Total: {progress.totalTasks}</p>
               <p>Completed: {progress.completed}</p>
               <p>Missed: {progress.missed}</p>
               <p>Pending: {progress.pending}</p>
               <p>Avg Confidence: {progress.avgConfidence}</p>
               <p>Risk: {progress.latestRisk}</p>
-
             </div>
-
           )}
 
         </div>
 
-
         {/* TASK LIST */}
-
         {plan && (
-
           <div className="card task-list">
+            <h2>Tasks</h2>
 
-  <h2>Tasks</h2>
+            {plan.tasks.map((t, i) => (
+              <div key={i} className="task-item">
+                <span>{t.taskId}</span>
+                <span>{t.allocatedHours} hrs</span>
+              </div>
+            ))}
 
-  {plan.tasks.map((t, i) => (
-
-    <div key={i} className="task-item">
-      {t.taskId} — {t.allocatedHours} hrs
-    </div>
-
-  ))}
-
-</div>
-
+          </div>
         )}
 
       </div>
 
     </div>
-
   );
-
 }
 
 export default Dashboard;

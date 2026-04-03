@@ -36,6 +36,24 @@ function Tasks() {
   };
 
 
+  const updateTask = async (taskId, action) => {
+
+  try {
+
+    await axios.post("http://localhost:8000/activitylog", {
+      taskId: taskId,
+      action: action
+    });
+
+    alert(action + " logged");
+
+  } catch (err) {
+    console.log(err);
+  }
+
+};
+
+
   return (
 
     <div style={{ padding: 20 }}>
@@ -63,18 +81,13 @@ function Tasks() {
           Deadline: {t.deadline} <br /><br />
 
 
-          <button
-            onClick={() => sendLog(t._id, "completed")}
-          >
-            Complete
-          </button>
+          <button onClick={() => updateTask(t._id, "completed")}>
+  Complete
+</button>
 
-          <button
-            onClick={() => sendLog(t._id, "missed")}
-            style={{ marginLeft: 10 }}
-          >
-            Missed
-          </button>
+<button onClick={() => updateTask(t._id, "missed")}>
+  Missed
+</button>
 
         </div>
 
