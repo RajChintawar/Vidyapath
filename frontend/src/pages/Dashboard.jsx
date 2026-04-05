@@ -14,8 +14,8 @@ function Dashboard() {
   const [progress, setProgress] = useState(null);
 
   useEffect(() => {
-
-    console.log("RENDERING DASHBOARD");
+// console.log("PLAN DATA:", plan);
+//     console.log("RENDERING DASHBOARD");
 
     getLatestPlan(userId)
       .then(res => setPlan(res.data))
@@ -39,10 +39,10 @@ function Dashboard() {
     try {
       setLoading(true);
 
-      await axios.post(`http://localhost:8000/generate-plan/${userId}`);
+      await axios.post(`http://localhost:5000/api/study-plans/generate-plan/${userId}`);
 
       const res = await axios.get(
-        `http://localhost:8000/studyplan/latest/${userId}`
+        `http://localhost:5000/api/study-plans/generate-plan/${userId}`
       );
 
 setPlan(null); // clear old plan
@@ -63,10 +63,10 @@ setTimeout(() => {
     try {
       setLoading(true);
 
-      await axios.post(`http://localhost:8000/generate-plan/${userId}`);
+      await axios.post(`http://localhost:5000/api/study-plans/generate-plan/${userId}`);
 
       const res = await axios.get(
-        `http://localhost:8000/studyplan/latest/${userId}`
+        `http://localhost:5000/api/study-plans/generate-plan/${userId}`
       );
 
 setPlan(null);
@@ -145,13 +145,15 @@ setTimeout(() => {
         </div>
 
         {/* TASK LIST */}
+        {plan && console.log("PLAN FRONTEND:", plan)}
+
         {plan && (
           <div className="card task-list">
             <h2>Tasks</h2>
 
             {plan.tasks.map((t, i) => (
               <div key={i} className="task-item">
-                <span>{t.taskId}</span>
+                <span>{t.taskId?.topic || "Task"}</span>
                 <span>{t.allocatedHours} hrs</span>
               </div>
             ))}
