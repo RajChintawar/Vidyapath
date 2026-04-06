@@ -35,3 +35,33 @@ exports.getStudyPlanByDate = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+// 3. Get latest study plan for a user 
+
+
+exports.getLatestPlan = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const plan = await StudyPlan.findOne({ userId })
+      .sort({ createdAt: -1 }) // latest plan
+      .populate("tasks.taskId"); // 🔥 THIS is for task names
+
+    if (!plan) {
+      return res.status(404).json({ message: "No plan found" });
+    }
+
+    res.json(plan);
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.generatePlan = async (req, res) => {
+  try {
+    res.json({ message: "Generate Plan route working" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
