@@ -17,9 +17,20 @@ function Dashboard() {
 // console.log("PLAN DATA:", plan);
 //     console.log("RENDERING DASHBOARD");
 
-    getLatestPlan(userId)
-      .then(res => setPlan(res.data))
-      .catch(err => console.log(err));
+   getLatestPlan(userId)
+  .then(async (res) => {
+    if (res.data) {
+      setPlan(res.data);
+    } else {
+      // auto-generate if no plan
+      await axios.post(`http://localhost:5000/api/study-plans/generate-plan/${userId}`);
+      const newRes = await axios.get(
+        `http://localhost:5000/api/study-plans/latest/${userId}`
+      );
+      setPlan(newRes.data);
+    }
+  })
+  .catch(err => console.error(err));
 
     getProgress(userId)
       .then(res => setProgress(res.data))
@@ -152,9 +163,25 @@ setTimeout(() => {
 
             {plan.tasks.map((t, i) => (
               <div key={i} className="task-item">
-                <span>{t.taskId?.topic || "Task"}</span>
-                <span>{t.allocatedHours} hrs</span>
-              </div>
+<input 
+  type="checkbox"
+  onChange={async (e) => {
+    if (e.target.checked) {
+      try {
+        await axios.post("http://localhost:5000/api/tasks/mark-complete", {
+          taskId: t.taskId?._id
+        });
+        console.log("Task marked complete");
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  }}
+/>
+  <span>{t.taskId?.topic || "Task"}</span>
+  
+  <span>{t.allocatedHours} hrs</span>
+</div>
             ))}
 
           </div>
