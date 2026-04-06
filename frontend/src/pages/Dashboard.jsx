@@ -39,10 +39,10 @@ function Dashboard() {
     try {
       setLoading(true);
 
-      await axios.post(`http://localhost:5000/api/study-plans/generate-plan/${userId}`);
-
+const resPost = await axios.post(`http://localhost:5000/api/study-plans/generate-plan/${userId}`);
+console.log("POST RESPONSE:", resPost.data);
       const res = await axios.get(
-        `http://localhost:5000/api/study-plans/generate-plan/${userId}`
+        `http://localhost:5000/api/study-plans/latest/${userId}`
       );
 
 setPlan(null); // clear old plan
@@ -66,8 +66,8 @@ setTimeout(() => {
       await axios.post(`http://localhost:5000/api/study-plans/generate-plan/${userId}`);
 
       const res = await axios.get(
-        `http://localhost:5000/api/study-plans/generate-plan/${userId}`
-      );
+  `http://localhost:5000/api/study-plans/latest/${userId}`
+);
 
 setPlan(null);
 setTimeout(() => {
@@ -145,7 +145,6 @@ setTimeout(() => {
         </div>
 
         {/* TASK LIST */}
-        {plan && console.log("PLAN FRONTEND:", plan)}
 
         {plan && (
           <div className="card task-list">
