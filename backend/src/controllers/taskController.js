@@ -73,3 +73,21 @@ exports.updateTaskStatus = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+
+exports.markTaskComplete = async (req, res) => {
+  try {
+    const { taskId } = req.body;
+
+    await ActivityLog.create({
+      taskId,
+      action: "completed",
+      timestamp: new Date()
+    });
+
+    res.json({ message: "Task marked complete" });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
