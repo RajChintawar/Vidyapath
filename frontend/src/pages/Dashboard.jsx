@@ -19,10 +19,12 @@ function Dashboard() {
 
    getLatestPlan(userId)
   .then(async (res) => {
-    if (res.data) {
+    console.log("LOADED PLAN:", res.data);
+
+    if (res.data && res.data.tasks && res.data.tasks.length > 0) {
       setPlan(res.data);
     } else {
-      // auto-generate if no plan
+      // auto-generate if no valid tasks
       await axios.post(`http://localhost:5000/api/study-plans/generate-plan/${userId}`);
       const newRes = await axios.get(
         `http://localhost:5000/api/study-plans/latest/${userId}`
